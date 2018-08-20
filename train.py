@@ -10,6 +10,7 @@ import tensorflow.contrib.layers as layers
 
 import collections
 from copy import deepcopy
+import random
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
@@ -40,6 +41,7 @@ def parse_args():
 
     #extra 
     parser.add_argument("--timestep", type = int, default = 5)
+    parser.add_argument("--seed", type = int, default = 10)
     return parser.parse_args()
 
 def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
@@ -216,15 +218,17 @@ def train(arglist):
 
             # saves final episode reward for plotting training curve later
             if len(episode_rewards) > arglist.num_episodes:
-                rew_file_name = arglist.plots_dir + arglist.exp_name + '_rewards.pkl'
+                rew_file_name = arglist.plots_dir + arglist.exp_name + arglist.seed + '_rewards.pkl'
                 with open(rew_file_name, 'wb') as fp:
                     pickle.dump(final_ep_rewards, fp)
-                agrew_file_name = arglist.plots_dir + arglist.exp_name + '_agrewards.pkl'
+                agrew_file_name = arglist.plots_dir + arglist.exp_name + arglist.seed + '_agrewards.pkl'
                 with open(agrew_file_name, 'wb') as fp:
                     pickle.dump(final_ep_ag_rewards, fp)
                 print('...Finished total of {} episodes.'.format(len(episode_rewards)))
                 break
 
 if __name__ == '__main__':
+
     arglist = parse_args()
+    random.seed(arglist.seed)
     train(arglist)

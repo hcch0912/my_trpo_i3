@@ -74,15 +74,16 @@ def get_trainers(env, num_adversaries, obs_shape_n, arglist):
     trainer = MADDPGAgentTrainer
     act_traj_space = [((env.n-1),  arglist.timestep ,  env.action_space[0].n) for i in range(env.n)] 
     intent_shape = [((env.n-1) * env.action_space[0].n, ) for i in range(env.n)]
-    for i in range(num_adversaries):
-        trainers.append(trainer(
-            "agent_%d" % i, model, obs_shape_n, env.action_space, act_traj_space,intent_shape, i, arglist,
-            local_q_func=(arglist.adv_policy=='ddpg')))
-    for i in range(num_adversaries, env.n):
-        trainers.append(trainer(
-            "agent_%d" % i, model, obs_shape_n, env.action_space,act_traj_space, intent_shape, i, arglist,
-            local_q_func=(arglist.good_policy=='ddpg')))
-    return trainers
+    with tf.device("/device:GPU:0"):
+        for i in range(num_adversaries):
+            trainers.append(trainer(
+                "agent_%d" % i, model, obs_shape_n, env.action_space, act_traj_space,intent_shape, i, arglist,
+                local_q_func=(arglist.adv_policy=='ddpg')))
+        for i in range(num_adversaries, env.n):
+            trainers.append(trainer(
+                "agent_%d" % i, model, obs_shape_n, env.action_space,act_traj_space, intent_shape, i, arglist,
+                local_q_func=(arglist.good_policy=='ddpg')))
+        return trainers
 
 def get_traj_n(act_trajs):
     act_traj = []

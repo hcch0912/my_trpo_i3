@@ -66,6 +66,8 @@ def make_env(scenario_name, arglist, benchmark=False):
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data)
     else:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
+    print("----------------------")
+    print(env.observation_space, env.action_space)    
     return env
 
 def get_trainers(env, num_adversaries, obs_shape_n, arglist):
@@ -219,10 +221,10 @@ def train(arglist):
 
             # saves final episode reward for plotting training curve later
             if len(episode_rewards) > arglist.num_episodes:
-                rew_file_name = arglist.plots_dir + arglist.exp_name + arglist.seed + '_rewards.pkl'
+                rew_file_name = arglist.plots_dir + arglist.exp_name + str(arglist.seed) + '_rewards.pkl'
                 with open(rew_file_name, 'wb') as fp:
                     pickle.dump(final_ep_rewards, fp)
-                agrew_file_name = arglist.plots_dir + arglist.exp_name + arglist.seed + '_agrewards.pkl'
+                agrew_file_name = arglist.plots_dir + arglist.exp_name + str(arglist.seed) + '_agrewards.pkl'
                 with open(agrew_file_name, 'wb') as fp:
                     pickle.dump(final_ep_ag_rewards, fp)
                 print('...Finished total of {} episodes.'.format(len(episode_rewards)))

@@ -124,7 +124,8 @@ def train(arglist):
         episode_rewards = [0.0]  # sum of rewards for all agents
         agent_rewards = [[0.0] for _ in range(env.n)]  # individual agent reward
         final_ep_rewards = []  # sum of rewards for training curve
-        final_ep_ag_rewards = []  # agent rewards for training curve
+        final_ep_ag_rewards = []
+        final_ep_accurancy =[]  # agent rewards for training curve
         agent_info = [[[]]]  # placeholder for benchmarking info
         saver = tf.train.Saver()
         obs_n = env.reset()
@@ -132,6 +133,7 @@ def train(arglist):
         train_step = 0
         t_start = time.time()
 
+        record_accurancy = [[]] * env.n
         #initialize act trajectories
         act_trajs = []
         for i in range(env.n):
@@ -161,7 +163,9 @@ def train(arglist):
                 agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
             obs_n = new_obs_n
             #update act_traj
-            
+            for i in range(len(intent_n)):
+                record_accurancy[i].append(np.square(np.array(intent_n[i]) - np.array(action_n[i])))
+               
             for i, rew in enumerate(rew_n):
                 episode_rewards[-1] += rew
                 agent_rewards[i][-1] += rew
@@ -218,6 +222,9 @@ def train(arglist):
                 final_ep_rewards.append(np.mean(episode_rewards[-arglist.save_rate:]))
                 for rew in agent_rewards:
                     final_ep_ag_rewards.append(np.mean(rew[-arglist.save_rate:]))
+                for acc in record_accurancy:
+                    final_ep_accurancy.append(np.mean(acc[-arglist.save_rate]))
+                 
 
             # saves final episode reward for plotting training curve later
             if len(episode_rewards) > arglist.num_episodes:
@@ -227,6 +234,9 @@ def train(arglist):
                 agrew_file_name = arglist.plots_dir + arglist.exp_name + str(arglist.seed) + '_agrewards.pkl'
                 with open(agrew_file_name, 'wb') as fp:
                     pickle.dump(final_ep_ag_rewards, fp)
+                acc_file = arglist.plots_dir + arglist.exp_name + str(arglist.seed) + '_accurancy.pkl'    
+                with open(acc_file, 'wb') as fp:
+                    pickle.dump(final_ep_accurancy, fp)    
                 print('...Finished total of {} episodes.'.format(len(episode_rewards)))
                 break
 

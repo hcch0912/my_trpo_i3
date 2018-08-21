@@ -32,15 +32,12 @@ def i_train(make_obs_ph_n, intent_ph_n, act_space_n, make_intent_ph_n, make_act_
         act_pdtype_n = [make_pdtype(act_space) for act_space in act_space_n]
 
         obs_ph_n = make_obs_ph_n
-        # act_ph_n = [act_pdtype_n[i].sample_placeholder([None], name="action"+str(i)) for i in range(len(act_space_n))]
         intent_ph_n = make_intent_ph_n
 
         flat_act_traj_ph_n =[tf.reshape(a, (-1,  a.shape[1] * a.shape[2] *a.shape[3])) for a in make_act_traj_ph_n] 
 
-        # flat_act_ph_n = tf.reshape(act_ph_n, (-1, act_space_n[0].n * len(obs_ph_n) ))
         act_traj_ph_n = make_act_traj_ph_n
 
-        # i_input = tf.concat([obs_ph_n, flat_act_traj_ph_n],  axis = 1)
         i_input = [tf.concat([obs, act_traj], axis = 1) for obs, act_traj in zip(obs_ph_n, flat_act_traj_ph_n)]
 
         i = i_func(i_input[i_index], output_size, scope = "i_func", num_units = 64 )
@@ -105,7 +102,6 @@ def p_train(make_obs_ph_n, act_space_n, make_intent_ph_n, p_index, p_func, q_fun
         update_target_p = make_update_exp(p_func_vars, target_p_func_vars)
 
         target_act_sample = act_pdtype_n[p_index].pdfromflat(target_p).sample()
-        print(obs_ph_n[p_index],intent_ph_n[p_index] )
         target_act = U.function(inputs=[obs_ph_n[p_index]] + [intent_ph_n[p_index]], outputs=target_act_sample)
 
         return act, train, update_target_p, {'p_values': p_values, 'target_act': target_act}
@@ -275,9 +271,12 @@ class MADDPGAgentTrainer(AgentTrainer):
             true_actions.append([])
             agent = act_traj_next_n[i]
             for j in range(len(agent)):
+                true_actions[i].append([])
                 for k in range(len(agent[j])):
                     a = deepcopy(agent[j][k][-1])
-                    true_actions[i].append(a)
+                    true_actions[i][j] = np.concatenate((true_actions[i][j],a), axis = 0)
+
+
         i_loss =  self.i_train(*(obs_n + act_traj_n + true_actions))
         self.i_update()
        

@@ -276,9 +276,8 @@ class MADDPGAgentTrainer(AgentTrainer):
                     a = deepcopy(agent[j][k][-1])
                     true_actions[i][j] = np.concatenate((true_actions[i][j],a), axis = 0)
 
-
         i_loss =  self.i_train(*(obs_n + act_traj_n + true_actions))
         self.i_update()
        
 
-        return [q_loss, p_loss, np.mean(target_q), np.mean(rew), np.mean(target_q_next), np.std(target_q)]
+        return [q_loss, p_loss,i_loss,  np.mean(target_q), np.mean(rew), np.mean(target_q_next), np.std(target_q)]

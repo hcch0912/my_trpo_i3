@@ -163,8 +163,8 @@ def train(arglist):
                 agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
             obs_n = new_obs_n
             #update act_traj
-            for i in range(len(intent_n)):
-                record_accurancy[i].append(np.square(np.array(intent_n[i]) - np.array(action_n[i])))
+            # for i in range(len(intent_n)):
+            #     record_accurancy[i].append(np.square(np.array(intent_n[i]) - np.array(action_n[i])))
                
             for i, rew in enumerate(rew_n):
                 episode_rewards[-1] += rew
@@ -205,7 +205,8 @@ def train(arglist):
                 agent.preupdate()
             for agent in trainers:
                 loss = agent.update(trainers, train_step)
-
+                if loss:   
+                    record_accurancy.append(loss[2])
             # save model, display training output
             if terminal and (len(episode_rewards) % arglist.save_rate == 0):
                 U.save_state(arglist.save_dir, saver=saver)
@@ -222,9 +223,12 @@ def train(arglist):
                 final_ep_rewards.append(np.mean(episode_rewards[-arglist.save_rate:]))
                 for rew in agent_rewards:
                     final_ep_ag_rewards.append(np.mean(rew[-arglist.save_rate:]))
-                for acc in record_accurancy:
-                    final_ep_accurancy.append(np.mean(acc[-arglist.save_rate]))
-                 
+            # if (len(record_accurancy) % arglist.save_rate == 0):
+            #     print("-----------------------------")
+            #     final_ep_accurancy.append(np.mean(record_accurancy[-arglist.save_rate]))
+            #     print(final_ep_accurancy)    
+            if (len(record_accurancy) % 100 == 0):
+                final_ep_accurancy.append(np.mean(record_accurancy[-100]))     
 
             # saves final episode reward for plotting training curve later
             if len(episode_rewards) > arglist.num_episodes:

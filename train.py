@@ -5,7 +5,8 @@ import time
 import pickle
 
 import maddpg.common.tf_util as U
-from maddpg.trainer.maddpg import MADDPGAgentTrainer
+from maddpg.trainer.maddpg import I3MADDPGAgentTrainer
+from origin_maddpg.trainer.maddpg import MADDPGAgentTrainer
 import tensorflow.contrib.layers as layers
 
 import collections
@@ -42,6 +43,8 @@ def parse_args():
     #extra 
     parser.add_argument("--timestep", type = int, default = 5)
     parser.add_argument("--seed", type = int, default = 10)
+    parser.add_argument("--good-i3", type = bool, default = True)
+    parser.add_argument("--adv-i3", type = bool, default = True)
     return parser.parse_args()
 
 def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
@@ -66,25 +69,36 @@ def make_env(scenario_name, arglist, benchmark=False):
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data)
     else:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
-    print("----------------------")
-    print(env.observation_space, env.action_space)    
     return env
 
 def get_trainers(env, num_adversaries, obs_shape_n, arglist):
     trainers = []
     model = mlp_model
-    trainer = MADDPGAgentTrainer
+    I3trainer = I3MADDPGAgentTrainer
+    Orgintrainer = MADDPGAgentTrainer
     act_traj_space = [((env.n-1),  arglist.timestep ,  env.action_space[0].n) for i in range(env.n)] 
     intent_shape = [((env.n-1) * env.action_space[0].n, ) for i in range(env.n)]
     # with tf.device("/device:GPU:0"):
-    for i in range(num_adversaries):
-        trainers.append(trainer(
-                "agent_%d" % i, model, obs_shape_n, env.action_space, act_traj_space,intent_shape, i, arglist,
-                local_q_func=(arglist.adv_policy=='ddpg')))
-    for i in range(num_adversaries, env.n):
-        trainers.append(trainer(
-                "agent_%d" % i, model, obs_shape_n, env.action_space,act_traj_space, intent_shape, i, arglist,
-                local_q_func=(arglist.good_policy=='ddpg')))
+    if arglist.adv_i3:
+        for i in range(num_adversaries):
+            trainers.append(I3trainer(
+                    "agent_%d" % i, model, obs_shape_n, env.action_space, act_traj_space,intent_shape, i, arglist,
+                    local_q_func=(arglist.adv_policy=='ddpg')))
+    else:
+        for i in range(num_adversaries):
+            trainers.append(Orgintrainer(
+                "agent_%d" % i, model, obs_shape_n, env.action_space, i, arglist,
+            local_q_func=(arglist.adv_policy=='ddpg')
+                ))        
+    if arglist.good_i3:        
+        for i in range(num_adversaries, env.n):
+            trainers.append(I3trainer(
+                    "agent_%d" % i, model, obs_shape_n, env.action_space,act_traj_space, intent_shape, i, arglist,
+                    local_q_func=(arglist.good_policy=='ddpg')))
+    else:
+        trainers.append(Orgintrainer(
+            "agent_%d" % i, model, obs_shape_n, env.action_space, i, arglist,
+            local_q_func=(arglist.good_policy=='ddpg')))        
     return trainers
 
 def get_traj_n(act_trajs):
@@ -195,7 +209,7 @@ def train(arglist):
 
             # for displaying learned policies
             if arglist.display:
-                time.sleep(0.1)
+                time.sleep(0.5)
                 env.render()
                 continue
 

@@ -116,6 +116,7 @@ class MADDPGAgentTrainer(AgentTrainer):
         self.agent_index = agent_index
         self.args = args
         obs_ph_n = []
+        self.act_size = act_space_n[0].n
         for i in range(self.n):
             obs_ph_n.append(U.BatchInput(obs_shape_n[i], name="observation"+str(i)).get())
 
@@ -170,20 +171,107 @@ class MADDPGAgentTrainer(AgentTrainer):
         obs_next_n = []
         act_n = []
         index = self.replay_sample_index
-        for i in range(self.n):
-            obs, act, rew, obs_next, done = agents[i].replay_buffer.sample_index(index)
-            obs_n.append(obs)
-            obs_next_n.append(obs_next)
-            act_n.append(act)
+        act_traj_n = []
+        intent_n = []
+        act_traj_next_n = []
+        intent_next_n = []
+        index = self.replay_sample_index
+
+        intent_temp = np.zeros((len(self.replay_sample_index), (self.n-1) * self.act_size))
+        act_traj_temp = np.zeros((len(self.replay_sample_index), (self.n-1), self.args.timestep, self.act_size))
+        
+
+        if self.args.good_i3 == 1 and self.args.adv_i3 == 1:
+            for i in range(self.n):
+                obs, act, rew, obs_next,act_traj, intent,act_traj_next, intent_next, done = agents[i].replay_buffer.sample_index(index)
+                obs_n.append(obs)
+                obs_next_n.append(obs_next)
+                act_n.append(act)
+                act_traj_n.append(act_traj)
+                intent_n.append(intent)
+                act_traj_next_n.append(act_traj_next)
+                intent_next_n.append(intent_next)
+            
+        elif self.args.good_i3 == 1 and self.args.adv_i3 == 0:
+            for i in range(self.n):
+                if i < self.args.num_adversaries:
+                    obs, act, rew, obs_next, done = agents[i].replay_buffer.sample_index(index)
+                    obs_n.append(obs)
+                    obs_next_n.append(obs_next)
+                    act_n.append(act)
+                    act_traj_n.append(act_traj_temp)
+                    intent_n.append(intent_temp)
+                    act_traj_next_n.append(act_traj_temp)
+                    intent_next_n.append(intent_temp)
+                else:
+                    obs, act, rew, obs_next,act_traj, intent,act_traj_next, intent_next, done = agents[i].replay_buffer.sample_index(index)
+                    obs_n.append(obs)
+                    obs_next_n.append(obs_next)
+                    act_n.append(act)
+                    act_traj_n.append(act_traj)
+                    intent_n.append(intent)
+                    act_traj_next_n.append(act_traj_next)
+                    intent_next_n.append(intent_next)
+        elif self.args.good_i3 == 0 and self.args.adv_i3 == 1:
+            for i in range(self.n):
+                if i < self.args.num_adversaries:
+                    obs, act, rew, obs_next,act_traj, intent,act_traj_next, intent_next, done = agents[i].replay_buffer.sample_index(index)
+                    obs_n.append(obs)
+                    obs_next_n.append(obs_next)
+                    act_n.append(act)
+                    act_traj_n.append(act_traj)
+                    intent_n.append(intent)
+                    act_traj_next_n.append(act_traj_next)
+                    intent_next_n.append(intent_next)
+                else:
+                    obs, act, rew, obs_next, done = agents[i].replay_buffer.sample_index(index)
+                    obs_n.append(obs)
+                    obs_next_n.append(obs_next)
+                    act_n.append(act)
+                    act_traj_n.append(act_traj_temp)
+                    intent_n.append(intent_temp)
+                    act_traj_next_n.append(act_traj_temp)
+                    intent_next_n.append(intent_temp)
+
+        else:
+            for i in range(self.n):
+                obs, act, rew, obs_next, done = agents[i].replay_buffer.sample_index(index)
+                obs_n.append(obs)
+                obs_next_n.append(obs_next)
+                act_n.append(act)
+                act_traj_n.append(act_traj_temp)
+                intent_n.append(intent_temp)
+                act_traj_next_n.append(act_traj_temp)
+                intent_next_n.append(intent_temp)
+        
         obs, act, rew, obs_next, done = self.replay_buffer.sample_index(index)
 
         # train q network
         num_sample = 1
         target_q = 0.0
-        for i in range(num_sample):
+        target_act_next_n =[]
+
+        if self.args.good_i3 == 1 and self.args.adv_i3 == 1:
+            target_act_next_n = [agents[i].p_debug['target_act'](*([obs_next_n[i]] +[intent_next_n[i]])) for i in range(self.n)]
+            
+        elif self.args.good_i3 == 1 and self.args.adv_i3 == 0:
+            for i in range(self.n):
+                if i >= self.args.num_adversaries:
+                    target_act_next_n.append(agents[i].p_debug['target_act'](*([obs_next_n[i]] +[intent_next_n[i]])))
+                else:
+                    target_act_next_n.append(agents[i].p_debug['target_act'](obs_next_n[i]))
+
+        elif self.args.good_i3 == 0 and self.args.adv_i3 == 1:    
+            for i in range(self.n):
+                if i < self.args.num_adversaries:
+                    target_act_next_n.append(agents[i].p_debug['target_act'](*([obs_next_n[i]] +[intent_next_n[i]])))
+                else:
+                    target_act_next_n.append(agents[i].p_debug['target_act'](obs_next_n[i]))
+        else:   
             target_act_next_n = [agents[i].p_debug['target_act'](obs_next_n[i]) for i in range(self.n)]
-            target_q_next = self.q_debug['target_q_values'](*(obs_next_n + target_act_next_n))
-            target_q += rew + self.args.gamma * (1.0 - done) * target_q_next
+           
+        target_q_next = self.q_debug['target_q_values'](*(obs_next_n + target_act_next_n))    
+        target_q += rew + self.args.gamma * (1.0 - done) * target_q_next
         target_q /= num_sample
         q_loss = self.q_train(*(obs_n + act_n + [target_q]))
 

@@ -120,6 +120,7 @@ def get_traj_n(act_trajs):
 
 
 def train(arglist):
+    
     with U.single_threaded_session():
         # Create environment
         env = make_env(arglist.scenario, arglist, arglist.benchmark)
@@ -186,7 +187,7 @@ def train(arglist):
                 intent_n = []
                 action_n = []
                 for i in range(len(trainers)):
-                    if i <arglist.num_adversaries:
+                    if i < arglist.num_adversaries:
                         intent = trainers[i].intent(obs_n[i], act_traj_n[i])
                         action = trainers[i].action(obs_n[i], intent)
                         action_n.append(action)
@@ -211,13 +212,13 @@ def train(arglist):
                     if i < arglist.num_adversaries:
                         intent_next_n.append(trainers[i].intent(new_obs_n[i], act_traj_next_n[i]))
                     else:
-                        intent_next_n.append(np.zeros((np.array(intent).shape)))   
+                        intent_next_n.append(np.zeros((arglist.timestep *  (env.action_space[0].n-1))))  
                 
-                for i in range(len(num_adversaries)):
+                for i in range(len(trainers)):
                     if i < arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
                     else:
-                        agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
+                        trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             elif arglist.good_i3 == 1 and arglist.adv_i3 ==0:
                 #adv use I3 good use maddpg
                 intent_n = []
@@ -231,7 +232,7 @@ def train(arglist):
                     else:
                         action = trainers[i].action(obs_n[i])    
                         action_n.append(action)
-                        intent_n.append(np.zeros((np.array(intent).shape)))
+                        intent_n.append(np.zeros((arglist.timestep *  (env.action_space[0].n-1))))
 
                 # environment step
                 new_obs_n, rew_n, done_n, info_n = env.step(action_n)
@@ -248,13 +249,13 @@ def train(arglist):
                     if i  >= arglist.num_adversaries:
                         intent_next_n.append(trainers[i].intent(new_obs_n[i], act_traj_next_n[i]))
                     else:
-                        intent_next_n.append(np.zeros((np.array(intent).shape)))   
+                        intent_next_n.append(np.zeros((arglist.timestep *  (env.action_space[0].n-1))))
                 
-                for i in range(len(num_adversaries)):
+                for i in range(len(trainers)):
                     if i  >= arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
                     else:
-                        agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
+                        trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             else:
                 action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)] 
                 new_obs_n, rew_n, done_n, info_n = env.step(action_n)

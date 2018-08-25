@@ -195,7 +195,7 @@ def train(arglist):
                     else:
                         action = trainers[i].action(obs_n[i])    
                         action_n.append(action)
-                        intent_n.append(np.zeros((np.array(intent).shape)))
+                        intent_n.append(np.zeros((arglist.timestep *  (env.action_space[0].n-1))))
 
                 # environment step
                 new_obs_n, rew_n, done_n, info_n = env.step(action_n)

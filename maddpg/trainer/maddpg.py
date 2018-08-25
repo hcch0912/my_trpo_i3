@@ -32,6 +32,7 @@ def i_train(make_obs_ph_n, intent_ph_n, act_space_n, make_intent_ph_n, make_act_
         act_pdtype_n = [make_pdtype(act_space) for act_space in act_space_n]
 
         obs_ph_n = make_obs_ph_n
+        #here the intent_ph can be used as the true actions, they are in the same shape
         intent_ph_n = make_intent_ph_n
 
         flat_act_traj_ph_n =[tf.reshape(a, (-1,  a.shape[1] * a.shape[2] *a.shape[3])) for a in make_act_traj_ph_n] 

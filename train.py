@@ -43,8 +43,8 @@ def parse_args():
     #extra 
     parser.add_argument("--timestep", type = int, default = 5)
     parser.add_argument("--seed", type = int, default = 10)
-    parser.add_argument("--good-i3", type = bool, default = True)
-    parser.add_argument("--adv-i3", type = bool, default = True)
+    parser.add_argument("--good-i3", type = int, default = 1)
+    parser.add_argument("--adv-i3", type = int, default = 1)
     return parser.parse_args()
 
 def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
@@ -79,7 +79,9 @@ def get_trainers(env, num_adversaries, obs_shape_n, arglist):
     act_traj_space = [((env.n-1),  arglist.timestep ,  env.action_space[0].n) for i in range(env.n)] 
     intent_shape = [((env.n-1) * env.action_space[0].n, ) for i in range(env.n)]
     # with tf.device("/device:GPU:0"):
-    if arglist.adv_i3:
+    print(arglist.adv_i3, arglist.good_i3)
+    if arglist.adv_i3 == 1:
+        print("i3 adv")
         for i in range(num_adversaries):
             trainers.append(I3trainer(
                     "agent_%d" % i, model, obs_shape_n, env.action_space, act_traj_space,intent_shape, i, arglist,
@@ -90,15 +92,17 @@ def get_trainers(env, num_adversaries, obs_shape_n, arglist):
                 "agent_%d" % i, model, obs_shape_n, env.action_space, i, arglist,
             local_q_func=(arglist.adv_policy=='ddpg')
                 ))        
-    if arglist.good_i3:        
+    if arglist.good_i3 == 1:   
+        print("i3 good")     
         for i in range(num_adversaries, env.n):
             trainers.append(I3trainer(
                     "agent_%d" % i, model, obs_shape_n, env.action_space,act_traj_space, intent_shape, i, arglist,
                     local_q_func=(arglist.good_policy=='ddpg')))
     else:
-        trainers.append(Orgintrainer(
-            "agent_%d" % i, model, obs_shape_n, env.action_space, i, arglist,
-            local_q_func=(arglist.good_policy=='ddpg')))        
+        for i in range(num_adversaries, env.n):
+            trainers.append(Orgintrainer(
+                "agent_%d" % i, model, obs_shape_n, env.action_space, i, arglist,
+                local_q_func=(arglist.good_policy=='ddpg')))        
     return trainers
 
 def get_traj_n(act_trajs):
@@ -156,30 +160,113 @@ def train(arglist):
         print('Starting iterations...')
         while True:
             # get action
+
             act_traj_n = get_traj_n(act_trajs)
-    
-            intent_n = [agent.intent(obs, act_traj) for agent, obs, act_traj in zip(trainers, obs_n, act_traj_n)]
-            action_n = [agent.action(obs, intent) for agent, obs,intent in zip(trainers,obs_n, intent_n)]
-            # environment step
-            new_obs_n, rew_n, done_n, info_n = env.step(action_n)
-            episode_step += 1
-            done = all(done_n)
-            terminal = (episode_step >= arglist.max_episode_len)
-            # collect experience
+            
+            if arglist.adv_i3 == 1 and arglist.good_i3 == 1:
+                intent_n = [agent.intent(obs, act_traj) for agent, obs, act_traj in zip(trainers, obs_n, act_traj_n)]
+                action_n = [agent.action(obs, intent) for agent, obs,intent in zip(trainers,obs_n, intent_n)]
+                # environment step
+                new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+                episode_step += 1
+                done = all(done_n)
+                terminal = (episode_step >= arglist.max_episode_len)
+                # collect experience
 
-            for i in range(len(act_trajs)):
-                act_trajs[i].append(action_n[i])
+                for i in range(len(act_trajs)):
+                    act_trajs[i].append(action_n[i])
 
-            act_traj_next_n = get_traj_n(act_trajs)
-            intent_next_n = [agent.intent(obs, act_traj) for agent, obs, act_traj in zip(trainers, new_obs_n, act_traj_next_n)]
+                act_traj_next_n = get_traj_n(act_trajs)
+                intent_next_n = [agent.intent(obs, act_traj) for agent, obs, act_traj in zip(trainers, new_obs_n, act_traj_next_n)]
 
-            for i, agent in enumerate(trainers):
-                agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
+                for i, agent in enumerate(trainers):
+                    agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
+            elif arglist.adv_i3 == 1 and arglist.good_i3 == 0:
+                #adv use I3 good use maddpg
+                intent_n = []
+                action_n = []
+                for i in range(len(trainers)):
+                    if i <arglist.num_adversaries:
+                        intent = trainers[i].intent(obs_n[i], act_traj_n[i])
+                        action = trainers[i].action(obs_n[i], intent)
+                        action_n.append(action)
+                        intent_n.append(intent)
+                    else:
+                        action = trainers[i].action(obs_n[i])    
+                        action_n.append(action)
+                        intent_n.append(np.zeros((np.array(intent).shape)))
+
+                # environment step
+                new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+                episode_step += 1
+                done = all(done_n)
+                terminal = (episode_step >= arglist.max_episode_len)
+
+                for i in range(len(act_trajs)):
+                    act_trajs[i].append(action_n[i])
+
+                act_traj_next_n = get_traj_n(act_trajs)
+                intent_next_n = []
+                for i in range(len(trainers)):
+                    if i < arglist.num_adversaries:
+                        intent_next_n.append(trainers[i].intent(new_obs_n[i], act_traj_next_n[i]))
+                    else:
+                        intent_next_n.append(np.zeros((np.array(intent).shape)))   
+                
+                for i in range(len(num_adversaries)):
+                    if i < arglist.num_adversaries:
+                        trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
+                    else:
+                        agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
+            elif arglist.good_i3 == 1 and arglist.adv_i3 ==0:
+                #adv use I3 good use maddpg
+                intent_n = []
+                action_n = []
+                for i in range(len(trainers)):
+                    if i >=arglist.num_adversaries:
+                        intent = trainers[i].intent(obs_n[i], act_traj_n[i])
+                        action = trainers[i].action(obs_n[i], intent)
+                        action_n.append(action)
+                        intent_n.append(intent)
+                    else:
+                        action = trainers[i].action(obs_n[i])    
+                        action_n.append(action)
+                        intent_n.append(np.zeros((np.array(intent).shape)))
+
+                # environment step
+                new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+                episode_step += 1
+                done = all(done_n)
+                terminal = (episode_step >= arglist.max_episode_len)
+
+                for i in range(len(act_trajs)):
+                    act_trajs[i].append(action_n[i])
+
+                act_traj_next_n = get_traj_n(act_trajs)
+                intent_next_n = []
+                for i in range(len(trainers)):
+                    if i  >= arglist.num_adversaries:
+                        intent_next_n.append(trainers[i].intent(new_obs_n[i], act_traj_next_n[i]))
+                    else:
+                        intent_next_n.append(np.zeros((np.array(intent).shape)))   
+                
+                for i in range(len(num_adversaries)):
+                    if i  >= arglist.num_adversaries:
+                        trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
+                    else:
+                        agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
+            else:
+                action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)] 
+                new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+                episode_step += 1
+                done = all(done_n)
+                terminal = (episode_step >= arglist.max_episode_len)
+                # collect experience
+                for i, agent in enumerate(trainers):
+                    agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)
+
             obs_n = new_obs_n
-            #update act_traj
-            # for i in range(len(intent_n)):
-            #     record_accurancy[i].append(np.square(np.array(intent_n[i]) - np.array(action_n[i])))
-               
+          
             for i, rew in enumerate(rew_n):
                 episode_rewards[-1] += rew
                 agent_rewards[i][-1] += rew

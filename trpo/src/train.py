@@ -354,7 +354,8 @@ def main(arglist):
             if input('Terminate training (y/[n])? ') == 'y':
                 break
             killer.kill_now = False
-        
+        if episode % arglist.save_rate == 0:
+            print("Episode {} complete".format(episode))
             
         # score = play(env, policy1, policy2)   
     for i in range(len(loggers)):

@@ -44,7 +44,7 @@ def i_train(make_obs_ph_n, intent_ph_n, act_space_n, make_intent_ph_n, make_act_
         i = i_func(i_input[i_index], output_size, scope = "i_func", num_units = 64 )
         i_func_vars = U.scope_vars(U.absolute_scope_name("i_func"))
 
-        #deine loss
+        #define loss
         loss = tf.reduce_mean(tf.square(i - intent_ph_n[i_index]))
         optimize_expr = U.minimize_and_clip(optimizer, loss, i_func_vars, grad_norm_clipping)
         train = U.function(inputs= obs_ph_n + act_traj_ph_n + intent_ph_n, outputs=loss, updates=[optimize_expr])
@@ -210,6 +210,13 @@ class I3MADDPGAgentTrainer(AgentTrainer):
         # print(np.array(obs).shape)
         intent = self.get_intent(*( [[obs]] + [[act_traj]]) )[0]
         return intent
+    def onpolicy_train_i(self, obs, act_traj, true_act):
+        obs =[ o for o in  np.reshape(obs, (2, 1, -1))]
+        act_traj = [a for a in np.reshape(act_traj, (2,1,1,5,5))]
+        true_act = [t for t in  np.reshape(true_act, (2,1,5))]
+        i_loss =  self.i_train(*(obs + act_traj + true_act))
+        self.i_update()
+        return i_loss
 
     def action(self, obs, intent):
         return self.act(*([[obs]] +[[intent]]))[0]
@@ -341,19 +348,19 @@ class I3MADDPGAgentTrainer(AgentTrainer):
 
         self.p_update()
         self.q_update()
+        if self.args.onpolicy_i == 0:
+            true_actions = []
+            for i in range(len(act_traj_next_n)):
+                true_actions.append([])
+                agent = act_traj_next_n[i]
+                for j in range(len(agent)):
+                    true_actions[i].append([])
+                    for k in range(len(agent[j])):
+                        a = deepcopy(agent[j][k][-1])
+                        true_actions[i][j] = np.concatenate((true_actions[i][j],a), axis = 0)
 
-        true_actions = []
-        for i in range(len(act_traj_next_n)):
-            true_actions.append([])
-            agent = act_traj_next_n[i]
-            for j in range(len(agent)):
-                true_actions[i].append([])
-                for k in range(len(agent[j])):
-                    a = deepcopy(agent[j][k][-1])
-                    true_actions[i][j] = np.concatenate((true_actions[i][j],a), axis = 0)
-
-        i_loss =  self.i_train(*(obs_n + act_traj_n + true_actions))
-        self.i_update()
+            i_loss =  self.i_train(*(obs_n + act_traj_n + true_actions))
+            self.i_update()
         return [q_loss, p_loss,i_loss,  np.mean(target_q), np.mean(rew), np.mean(target_q_next), np.std(target_q)]
 
 

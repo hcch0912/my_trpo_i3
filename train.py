@@ -45,6 +45,7 @@ def parse_args():
     parser.add_argument("--seed", type = int, default = 10)
     parser.add_argument("--good-i3", type = int, default = 1)
     parser.add_argument("--adv-i3", type = int, default = 1)
+    parser.add_argument("--onpolicy_i", type = int, default = 0)
     return parser.parse_args()
 
 def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
@@ -182,6 +183,9 @@ def train(arglist):
 
                 for i, agent in enumerate(trainers):
                     agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
+                    if arglist.onpolicy_i == 1:
+                        i_loss = agent.onpolicy_train_i(obs_n, act_traj_n,action_n )
+
             elif arglist.adv_i3 == 1 and arglist.good_i3 == 0:
                 #adv use I3 good use maddpg
                 intent_n = []
@@ -217,6 +221,8 @@ def train(arglist):
                 for i in range(len(trainers)):
                     if i < arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
+                        if arglist.onpolicy_i == 1:
+                            i_loss = agent.onpolicy_train_i(obs_n[i], act_traj_n[i],action_n[i] )
                     else:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             elif arglist.good_i3 == 1 and arglist.adv_i3 ==0:
@@ -254,6 +260,8 @@ def train(arglist):
                 for i in range(len(trainers)):
                     if i  >= arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
+                        if arglist.onpolicy_i == 1:
+                            i_loss = agent.onpolicy_train_i(obs_n, act_traj_n,action_n )
                     else:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             else:

@@ -222,7 +222,7 @@ def train(arglist):
                     if i < arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
                         if arglist.onpolicy_i == 1:
-                            i_loss = agent.onpolicy_train_i(obs_n[i], act_traj_n[i],action_n[i] )
+                            i_loss = trainers[i].onpolicy_train_i(obs_n[i], act_traj_n[i],action_n[i] )
                     else:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             elif arglist.good_i3 == 1 and arglist.adv_i3 ==0:
@@ -261,7 +261,7 @@ def train(arglist):
                     if i  >= arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
                         if arglist.onpolicy_i == 1:
-                            i_loss = agent.onpolicy_train_i(obs_n, act_traj_n,action_n )
+                            i_loss = trainers[i].onpolicy_train_i(obs_n, act_traj_n,action_n )
                     else:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             else:

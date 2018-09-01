@@ -338,7 +338,10 @@ def train(arglist):
                     final_ep_ag_rewards.append(np.mean(rew[-arglist.save_rate:]))            #     print("-----------------------------")
                 
                 for iloss in episode_accuracy:
-                    final_ep_accurancy.append(np.mean(iloss[-arglist.save_rate]))
+                    if len(iloss) < arglist.save_rate:
+                        continue
+                    else:
+                        final_ep_accurancy.append(np.mean(iloss[-arglist.save_rate]))
 
             # saves final episode reward for plotting training curve later
             if len(episode_rewards) > arglist.num_episodes:

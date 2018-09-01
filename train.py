@@ -142,6 +142,7 @@ def train(arglist):
             U.load_state(arglist.load_dir)
 
         episode_rewards = [0.0]  # sum of rewards for all agents
+        episode_accuracy = [[] for i in range(env.n)]
         agent_rewards = [[0.0] for _ in range(env.n)]  # individual agent reward
         final_ep_rewards = []  # sum of rewards for training curve
         final_ep_ag_rewards = []
@@ -185,7 +186,7 @@ def train(arglist):
                     agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
                     if arglist.onpolicy_i == 1:
                         i_loss = agent.onpolicy_train_i(obs_n, act_traj_n,action_n )
-
+                        episode_accuracy[i].append(i_loss)
             elif arglist.adv_i3 == 1 and arglist.good_i3 == 0:
                 #adv use I3 good use maddpg
                 intent_n = []
@@ -222,7 +223,8 @@ def train(arglist):
                     if i < arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
                         if arglist.onpolicy_i == 1:
-                            i_loss = agent.onpolicy_train_i(obs_n[i], act_traj_n[i],action_n[i] )
+                            i_loss = trainers[i].onpolicy_train_i(obs_n, act_traj_n,action_n)
+                            episode_accuracy[i].append(i_loss)
                     else:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             elif arglist.good_i3 == 1 and arglist.adv_i3 ==0:
@@ -261,7 +263,8 @@ def train(arglist):
                     if i  >= arglist.num_adversaries:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], act_traj_n[i], intent_n[i],act_traj_next_n[i], intent_next_n[i], done_n[i], terminal)
                         if arglist.onpolicy_i == 1:
-                            i_loss = agent.onpolicy_train_i(obs_n, act_traj_n,action_n )
+                            i_loss = trainers[i].onpolicy_train_i(obs_n, act_traj_n,action_n )
+                            episode_accuracy[i].append(i_loss)
                     else:
                         trainers[i].experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)    
             else:
@@ -284,6 +287,7 @@ def train(arglist):
                 obs_n = env.reset()
                 episode_step = 0
                 episode_rewards.append(0)
+
                 for a in agent_rewards:
                     a.append(0)
                 agent_info.append([[]])
@@ -315,8 +319,7 @@ def train(arglist):
                 agent.preupdate()
             for agent in trainers:
                 loss = agent.update(trainers, train_step)
-                if loss:   
-                    record_accurancy.append(loss[2])
+                
             # save model, display training output
             if terminal and (len(episode_rewards) % arglist.save_rate == 0):
                 U.save_state(arglist.save_dir, saver=saver)
@@ -333,8 +336,12 @@ def train(arglist):
                 final_ep_rewards.append(np.mean(episode_rewards[-arglist.save_rate:]))
                 for rew in agent_rewards:
                     final_ep_ag_rewards.append(np.mean(rew[-arglist.save_rate:]))            #     print("-----------------------------")
-            if (len(record_accurancy) % 100 == 0):
-                final_ep_accurancy.append(np.mean(record_accurancy[-100]))     
+                
+                for iloss in episode_accuracy:
+                    if len(iloss) < arglist.save_rate:
+                        continue
+                    else:
+                        final_ep_accurancy.append(np.mean(iloss[-arglist.save_rate]))
 
             # saves final episode reward for plotting training curve later
             if len(episode_rewards) > arglist.num_episodes:

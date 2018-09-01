@@ -210,10 +210,19 @@ class I3MADDPGAgentTrainer(AgentTrainer):
         # print(np.array(obs).shape)
         intent = self.get_intent(*( [[obs]] + [[act_traj]]) )[0]
         return intent
-    def onpolicy_train_i(self, obs, act_traj, true_act):
-        obs =[ o for o in  np.reshape(obs, (2, 1, -1))]
-        act_traj = [a for a in np.reshape(act_traj, (2,1,len(act_traj[0]),len(act_traj[1]),len(act_traj[2])))]
-        true_act = [t for t in  np.reshape(true_act, (2,1,-1))]
+
+    def onpolicy_train_i(self, obs, act_traj, true_act):        
+        # print(np.array(act_traj).shape)
+        true_actions = []
+        for i in range(len(true_act)):
+            true_actions.append([])
+            for j in range(len(true_act)):
+                if j != i:
+                    true_actions[i].append(true_act[j])        
+
+        obs =[ o for o in  np.reshape(obs, (len(obs), 1, -1))]
+        act_traj = [a for a in np.reshape(act_traj, (len(obs),1,len(act_traj[0]),len(act_traj[0][0]),len(act_traj[0][0][0])))]
+        true_act = [t for t in  np.reshape(true_actions, (len(obs),1,-1))]
         i_loss =  self.i_train(*(obs + act_traj + true_act))
         self.i_update()
         return i_loss

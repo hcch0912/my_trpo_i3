@@ -1,15 +1,8 @@
-# Multi-Agent Deep Deterministic Policy Gradient (MADDPG)
+# Multi-Agent Particle Environment runtime instruction
 
-This is the code for implementing the MADDPG algorithm presented in the paper:
-[Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments](https://arxiv.org/pdf/1706.02275.pdf).
-It is configured to be run in conjunction with environments from the
 [Multi-Agent Particle Environments (MPE)](https://github.com/openai/multiagent-particle-envs).
-Note: this codebase has been restructured since the original paper, and the results may
-vary from those reported in the paper.
 
 ## Installation
-
-- To install, `cd` into the root directory and type `pip install -e .`
 
 - Known dependencies: Python (3.5.4), OpenAI gym (0.10.5), tensorflow (1.8.0), numpy (1.14.5)
 

@@ -170,16 +170,17 @@ def train(arglist):
                 act_traj_next_n = get_traj_n(act_trajs)
                 intent_next_n = [agent.intent(obs, act_traj) for agent, obs, act_traj in zip(trainers, new_obs_n, act_traj_next_n)]
 
-                obs_n_ep.append(obs_n )
-                action_n_ep.append(action_n)
-                rew_n_ep.append(rew_n)
-                new_obs_n_ep.append(new_obs_n)
-                act_traj_n_ep.append(act_traj_n)
-                intent_n_ep.append(intent_n)
-                act_traj_next_n_ep.append(act_traj_n)
-                intent_next_n_ep.append(intent_next_n)
-                terminal_ep.append(terminal)
-                
+                for i in range(len(trainers)):
+                    obs_n_ep[i].append(obs_n[i])
+                    action_n_ep[i].append(action_n[i])
+                    rew_n_ep[i].append(rew_n[i])
+                    new_obs_n_ep[i].append(new_obs_n[i])
+                    act_traj_n_ep[i].append(act_traj_n[i])
+                    intent_n_ep[i].append(intent_n[i])
+                    act_traj_next_n_ep[i].append(act_traj_n[i])
+                    intent_next_n_ep[i].append(intent_next_n[i])
+                    terminal_ep[i].append(terminal[i])
+
                 obs_n = new_obs_n
                    
                 for i, rew in enumerate(rew_n):

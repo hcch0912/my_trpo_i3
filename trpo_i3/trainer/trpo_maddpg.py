@@ -314,16 +314,14 @@ class TRPOMADDPGAgentTrainer(AgentTrainer):
         # train q network
         num_sample = len(obs_n_ep)
         target_q = 0.0
-        
        
-
         for j in range(num_sample):
             target_act_next_n_j = [agents[i][j].p_debug['target_act'](*([obs_next_n[i][j]] +[intent_next_n[i][j]])) for i in range(self.n)]
             target_q_next_j = self.q_debug['target_q_values'](*(obs_next_n[j] + target_act_next_n_j[j] +intent_next_n[j]))
             target_q += rew + self.args.gamma * (1.0 - done) * target_q_next_j
         target_q /= num_sample
 
-        q_loss = self.q_train(*(obs_n + act_n +intent_n +[target_q]))
+        q_loss = self.q_train(*(obs_n_ep + act_n_ep +intent_n_ep +[target_q]))
 
         self.q_update()
 
@@ -334,9 +332,9 @@ class TRPOMADDPGAgentTrainer(AgentTrainer):
         for e in range(self.epochs):
             # train p network and i network together, two source of gradient , 1 -- critic 2 -- supervision
 
-            p_loss, p_kl, p_entropy = self.p_train(*(obs_n + act_n + intent_n + [self.lr_multiplier] + [self.beta]))
+            p_loss, p_kl, p_entropy = self.p_train(*(obs_n_ep + act_n_ep + intent_n_ep + [self.lr_multiplier] + [self.beta]))
 
-            i_loss, i_kl , i_entropy = self.i_train((*obs_n + act_traj_n + intent_n+ [self.lr_multiplier] + [self.beta]))
+            i_loss, i_kl , i_entropy = self.i_train((*obs_n_ep + act_traj_n_ep + intent_n_ep+ [self.lr_multiplier] + [self.beta]))
             if p_kl > self.kl_targ * 4 or i_kl > self.kl_targ:
                 break
 
@@ -350,4 +348,4 @@ class TRPOMADDPGAgentTrainer(AgentTrainer):
                 self.lr_multiplier *= 1.5        
     
 
-        return [q_loss, p_loss,i_loss]
+        return [q_loss, p_loss,i_loss, p_entropy, i_entropy]

@@ -1,4 +1,4 @@
-# Multi-Agent Particle Environment runtime instruction
+# Trust Region I3 Running Instruction
 
 [Multi-Agent Particle Environments (MPE)](https://github.com/openai/multiagent-particle-envs).
 
@@ -34,11 +34,13 @@ by following the `README`.
 
 - `--num-adversaries`: number of adversaries in the environment (default: `0`)
 
-- `--good-policy`: algorithm used for the 'good' (non adversary) policies in the environment
+- `--good-i3`: algorithm used for the 'good' (non adversary) policies in the environment
 (default: `"maddpg"`; options: {`"maddpg"`, `"ddpg"`})
 
-- `--adv-policy`: algorithm used for the adversary policies in the environment
-(default: `"maddpg"`; options: {`"maddpg"`, `"ddpg"`})
+- `--adv-i3`: algorithm used for the adversary policies in the environment
+(default: `"tri3"`; options: {`"maddpg"`, `"ddpg"`})
+
+- `--onpolicy_i`: on-policy train intent inferenc model or off policy-train
 
 ### Core training parameters
 
@@ -46,9 +48,20 @@ by following the `README`.
 
 - `--gamma`: discount factor (default: `0.95`)
 
+- `--kl`: the target kl divergence number 
+
+- `--lambda`: the generalized advantage estimation 
+
+- `--policy-logvar`: the initial policy log variance
+
 - `--batch-size`: batch size (default: `1024`)
 
 - `--num-units`: number of units in the MLP (default: `64`)
+
+- `--timestep`: the timesteps of action trajectories 
+
+- `--seed`: the random seed to identify each training 
+
 
 ### Checkpointing
 
@@ -80,25 +93,11 @@ has been provided), but does not continue training (default: `False`)
 
 - `./experiments/train.py`: contains code for training MADDPG on the MPE
 
-- `./maddpg/trainer/maddpg.py`: core code for the MADDPG algorithm
+- `./trpo_i3/trainer/maddpg.py`: core code for the MADDPG algorithm
 
-- `./maddpg/trainer/replay_buffer.py`: replay buffer code for MADDPG
+- `./trpo_i3/trainer/replay_buffer.py`: replay buffer code for MADDPG
 
-- `./maddpg/common/distributions.py`: useful distributions used in `maddpg.py`
+- `./trpo_i3/common/distributions.py`: useful distributions used in `maddpg.py`
 
-- `./maddpg/common/tf_util.py`: useful tensorflow functions used in `maddpg.py`
+- `./trpo_i3/common/tf_util.py`: useful tensorflow functions used in `maddpg.py`
 
-
-
-## Paper citation
-
-If you used this code for your experiments or found it helpful, consider citing the following paper:
-
-<pre>
-@article{lowe2017multi,
-  title={Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments},
-  author={Lowe, Ryan and Wu, Yi and Tamar, Aviv and Harb, Jean and Abbeel, Pieter and Mordatch, Igor},
-  journal={Neural Information Processing Systems (NIPS)},
-  year={2017}
-}
-</pre>

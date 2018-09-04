@@ -35,7 +35,7 @@ by following the `README`.
 - `--num-adversaries`: number of adversaries in the environment (default: `0`)
 
 - `--good-i3`: algorithm used for the 'good' (non adversary) policies in the environment
-(default: `"maddpg"`; options: {`"maddpg"`, `"ddpg"`})
+(default: `"tri3"`; options: {`"maddpg"`, `"ddpg"`})
 
 - `--adv-i3`: algorithm used for the adversary policies in the environment
 (default: `"tri3"`; options: {`"maddpg"`, `"ddpg"`})
